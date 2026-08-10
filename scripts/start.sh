@@ -24,6 +24,8 @@ mkdir -p "$WEBDAV_BASE"
 webdav_data_dir="$WEBDAV_BASE/$WEBDAV_DATA"
 
 # Verify that the files and directories in the config are valid
+[[ -n "$WEBDAV_DATA" ]] \
+    || die '$WEBDAV_DATA not set'
 [[ -d "$webdav_data_dir" ]] \
     || die '$WEBDAV_DATA set to invalid directory'
 [[ -n "$WEBDAV_USERS" ]] \
@@ -43,12 +45,10 @@ webdav_data_dir="$WEBDAV_BASE/$WEBDAV_DATA"
 [[ -n "$WEBDAV_USERS_CONFIG" ]] \
     || export WEBDAV_USERS_CONFIG="$HTTPD_PREFIX/conf/webdav_users.conf"
 
-# Create user (if needed)
+# Create user (if needed), -o allows reusing an existing UID/GID
 if ! id webdav &> /dev/null; then
-    grep -q ":$WEBDAV_GROUP_ID:" /etc/group \
-        || addgroup --gid "$WEBDAV_GROUP_ID" group
-    adduser --uid "$WEBDAV_USER_ID" webdav \
-        --gecos "" --disabled-password --no-create-home --ingroup group
+    groupadd -o -g "$WEBDAV_GROUP_ID" group
+    useradd -o -u "$WEBDAV_USER_ID" -g group -M webdav
 fi
 
 # Generate the users config that rules for each user's directory
@@ -84,13 +84,16 @@ if [[ -n "$WEBDAV_PUBLIC" ]]; then
 fi
 
 # Set permissions if needed
-chown -R "$WEBDAV_USER_ID" "$WEBDAV_BASE"
-chmod -R u+rwx "$WEBDAV_BASE"
+chown -R "$WEBDAV_USER_ID:$WEBDAV_GROUP_ID" "$WEBDAV_BASE"
+chmod -R u+rwX "$WEBDAV_BASE"
 
-# Pass all exports that start with WEBDAV_FLAG_ as parameters to make them
+# Pass all variables that start with WEBDAV_FLAG_ as parameters to make them
 # accessible from <IfDefine> in Apache config
-flags=$(env | grep -o '^WEBDAV_FLAG_[^=]\+' | xargs printf '-D%s ')
+flags=()
+for var in "${!WEBDAV_FLAG_@}"; do
+    flags+=("-D$var")
+done
 
 trap - EXIT
 
-httpd-foreground $flags
+exec httpd-foreground "${flags[@]}"

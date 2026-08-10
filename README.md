@@ -133,14 +133,16 @@ docker run \
 
 ## Example `docker-compose.yaml`
 
+Note that Docker Compose interpolates `$` in the config file, so every `$` in
+the password hashes must be escaped as `$$`.
+
 ```yaml
-version: '3.8'
 services:
   webdav:
     image: ghcr.io/fstanis/docker-webdav-server:latest
     container_name: docker-webdav-server
     ports:
-      - 443
+      - '443:443'
     environment:
       SERVER_NAME: example.com
       PORT: 443
@@ -149,7 +151,7 @@ services:
       WEBDAV_PUBLIC: public
       WEBDAV_SUPERUSER: admin
       WEBDAV_RO_USER: reader
-      WEBDAV_USERS: 'admin:$2y$05$y8RdBk3uE0Ja..Ubk0RMVusH/SXNER7pqeQvCu8oiejQ708/VG7yC;reader:$2y$05$t.agH.tiNtB5VMlA1O2gqOLw09h.HFCkGhnW7NVEOILXbeKV5aUGS'
+      WEBDAV_USERS: 'admin:$$2y$$05$$y8RdBk3uE0Ja..Ubk0RMVusH/SXNER7pqeQvCu8oiejQ708/VG7yC;reader:$$2y$$05$$t.agH.tiNtB5VMlA1O2gqOLw09h.HFCkGhnW7NVEOILXbeKV5aUGS'
       WEBDAV_SSL_CERT: /run/secrets/fullchain
       WEBDAV_SSL_CERT_KEY: /run/secrets/privkey
       WEBDAV_FLAG_VERBOSE: 1

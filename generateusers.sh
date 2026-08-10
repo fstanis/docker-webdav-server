@@ -4,13 +4,12 @@ results=""
 usernames=""
 
 while true; do
-    read -p "Enter username to add, leave empty if finished: " username
+    read -rp "Enter username to add, leave empty if finished: " username
     if [[ -z "$username" ]]; then
         break
     fi
 
-    credentials="$(htpasswd -nB "$username")"
-    if [[ $? -eq 0 ]]; then
+    if credentials="$(htpasswd -nB "$username")"; then
         if [[ -z "$results" ]]; then
             results="$credentials"
             usernames="$username"
