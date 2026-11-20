@@ -11,11 +11,12 @@ trap 'die "Error executing start script"' EXIT
 [[ -d "$HTTPD_PREFIX" ]] \
     || die '$HTTPD_PREFIX not set'
 
-[[ -n "$SERVER_NAME" ]] \
-    || die '$SERVER_NAME not set'
-
 [[ "$PORT" -gt 0 ]] \
     || die '$PORT is invalid'
+
+[[ -n "${WEBDAV_EXTERNAL_URL:-}" ]] \
+    || die '$WEBDAV_EXTERNAL_URL not set'
+export WEBDAV_EXTERNAL_URL="${WEBDAV_EXTERNAL_URL%/}"
 
 [[ -n "$WEBDAV_BASE" && "$WEBDAV_BASE" != '/' ]] \
     || die '$WEBDAV_BASE not set or invalid'
@@ -36,6 +37,17 @@ webdav_data_dir="$WEBDAV_BASE/$WEBDAV_DATA"
     || die '$WEBDAV_SSL_CERT_KEY set to invalid file'
 
 # Config defaults
+export WEBDAV_URL_PREFIX="${WEBDAV_URL_PREFIX:-/}"
+if [[ "$WEBDAV_URL_PREFIX" != / ]]; then
+    WEBDAV_URL_PREFIX="${WEBDAV_URL_PREFIX%/}"
+    [[ "$WEBDAV_URL_PREFIX" == /* ]] \
+        || die '$WEBDAV_URL_PREFIX must be an absolute URL path'
+    case "$WEBDAV_URL_PREFIX/" in
+        *"/../"*|*"/./"*|*"//"*)
+            die '$WEBDAV_URL_PREFIX must not contain empty, dot, or parent segments'
+            ;;
+    esac
+fi
 [[ "$WEBDAV_USER_ID" -gt 0 ]] \
     || export WEBDAV_USER_ID=1000
 [[ "$WEBDAV_GROUP_ID" -gt 0 ]] \
@@ -90,10 +102,14 @@ chmod -R u+rwX "$WEBDAV_BASE"
 # Pass all variables that start with WEBDAV_FLAG_ as parameters to make them
 # accessible from <IfDefine> in Apache config
 flags=()
+if [[ "$WEBDAV_URL_PREFIX" != / ]]; then
+    flags+=("-DWEBDAV_URL_PREFIX_ENABLED")
+fi
 for var in "${!WEBDAV_FLAG_@}"; do
     flags+=("-D$var")
 done
 
-trap - EXIT
+httpd -t "${flags[@]}"
 
+trap - EXIT
 exec httpd-foreground "${flags[@]}"

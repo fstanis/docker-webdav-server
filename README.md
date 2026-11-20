@@ -7,8 +7,8 @@ Version 2.4 with [`mod_dav`](https://httpd.apache.org/docs/2.4/mod/mod_dav.html)
 
 ### Core settings
 
-- `SERVER_NAME`: How your server identifies itself. Set this to your domain
-  name.
+- `WEBDAV_EXTERNAL_URL`: Public HTTP(S) origin, e.g. `https://dav.example.com`.
+  Include the port if nonstandard. Must be set.
 
 - `PORT`: The port to bind the server to.
 
@@ -39,6 +39,11 @@ Version 2.4 with [`mod_dav`](https://httpd.apache.org/docs/2.4/mod/mod_dav.html)
   set unless `WEBDAV_FLAG_INSECURE` is set.
 
 ### Optional Parameters
+
+- `WEBDAV_URL_PREFIX`: URL path to serve WebDAV at, e.g. `/webdav`.
+  Reverse proxies must preserve this prefix.
+
+Default: `/`
 
 - `WEBDAV_USER_ID`: User ID to run the server as. Should match the user owning
   `WEBDAV_DATA`.
@@ -112,7 +117,7 @@ WEBDAV_USERS='admin:$2y$05$y8RdBk3uE0Ja..Ubk0RMVusH/SXNER7pqeQvCu8oiejQ708/VG7yC
 docker run \
   --name docker-webdav-server \
   -p 443:443 \
-  -e SERVER_NAME="example.com" \
+  -e WEBDAV_EXTERNAL_URL="https://example.com" \
   -e PORT="443" \
   -e WEBDAV_BASE="/webdav" \
   -e WEBDAV_DATA="data" \
@@ -144,8 +149,8 @@ services:
     ports:
       - '443:443'
     environment:
-      SERVER_NAME: example.com
       PORT: 443
+      WEBDAV_EXTERNAL_URL: https://example.com
       WEBDAV_BASE: /webdav
       WEBDAV_DATA: data
       WEBDAV_PUBLIC: public
